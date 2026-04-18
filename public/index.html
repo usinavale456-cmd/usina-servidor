@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚗️ Sistema de Medição Química</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --bg: #050d1a;
+    --card: #0a1628;
+    --border: #00d4ff33;
+    --primary: #00d4ff;
+    --secondary: #7b2ff7;
+    --success: #00ff88;
+    --danger: #ff3366;
+    --warning: #ffaa00;
+    --text: #e0f0ff;
+    --text2: #7a9ab5;
+    --glow: 0 0 20px #00d4ff44;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  header {
+    background: linear-gradient(135deg, #050d1a, #0a1628);
+    border-bottom: 1px solid var(--border);
+    padding: 15px 30px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 30px #00d4ff22;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 45px; height: 45px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; box-shadow: var(--glow);
+  }
+  .logo h1 { font-size: 20px; color: var(--primary); letter-spacing: 2px; text-transform: uppercase; }
+  .logo p { font-size: 11px; color: var(--text2); letter-spacing: 1px; }
+  .header-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--success); }
+  .dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .tabs {
+    display: flex; background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px; overflow-x: auto;
+  }
+  .tab {
+    padding: 16px 24px; cursor: pointer; font-size: 13px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--text2);
+    border-bottom: 3px solid transparent; transition: all 0.3s; white-space: nowrap;
+  }
+  .tab:hover { color: var(--primary); }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .container { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 25px; margin-bottom: 25px;
+    box-shadow: 0 4px 30px #00000044;
+  }
+  .card-title {
+    font-size: 14px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--primary); margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); }
+  input, select {
+    background: #0d1f35; border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    padding: 10px 14px; font-size: 14px; transition: all 0.3s; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px #00d4ff22; }
+  select option { background: #0a1628; }
+  .btn {
+    padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+    transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; box-shadow: 0 4px 20px #00d4ff33; }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-success { background: linear-gradient(135deg, var(--success), #00aa66); color: #000; }
+  .btn-success:hover { transform: translateY(-2px); }
+  .btn-danger { background: linear-gradient(135deg, var(--danger), #cc0033); color: #fff; }
+  .btn-danger:hover { transform: translateY(-2px); }
+  .btn-warning { background: linear-gradient(135deg, var(--warning), #cc7700); color: #000; }
+  .btn-warning:hover { transform: translateY(-2px); }
+  .btn-pdf { background: linear-gradient(135deg, #ff6b6b, #cc0000); color: #fff; }
+  .btn-pdf:hover { transform: translateY(-2px); }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+  .btn-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; text-align: center; position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; background: linear-gradient(90deg, var(--primary), var(--secondary));
+  }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--primary); }
+  .stat-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); margin-top: 5px; }
+  .table-wrap { overflow-x: auto; border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: #0d1f35; }
+  th { padding: 12px 16px; text-align: left; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); border-bottom: 1px solid var(--border); }
+  td { padding: 12px 16px; border-bottom: 1px solid #ffffff08; }
+  tr:hover td { background: #0d1f3588; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-up { background: #00ff8822; color: var(--success); }
+  .badge-down { background: #ff336622; color: var(--danger); }
+  .badge-neutral { background: #ffffff11; color: var(--text2); }
+  .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 25px; margin-bottom: 25px; }
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 25px; }
+  .chart-card canvas { max-height: 280px; }
+  .chart-filter { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; }
+  .chart-filter select { padding: 8px 12px; font-size: 12px; flex: 1; min-width: 140px; }
+  .toast {
+    position: fixed; bottom: 30px; right: 30px;
+    padding: 14px 24px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    z-index: 999; opacity: 0; transform: translateY(20px); transition: all 0.4s; max-width: 350px;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: #00ff8822; border: 1px solid var(--success); color: var(--success); }
+  .toast.error { background: #ff336622; border: 1px solid var(--danger); color: var(--danger); }
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: #000000cc; z-index: 500; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 30px; width: 90%; max-width: 500px;
+    box-shadow: 0 20px 60px #00000088;
+  }
+  .modal h3 { color: var(--primary); margin-bottom: 20px; font-size: 16px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .empty { text-align: center; padding: 50px; color: var(--text2); }
+  .empty-icon { font-size: 48px; margin-bottom: 15px; }
+  .preview-box { background: #0d1f35; border: 1px solid #00d4ff44; border-radius: 12px; padding: 20px; margin-top: 20px; display: none; }
+  .rel-filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+  @media (max-width: 768px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    header { flex-direction: column; gap: 10px; text-align: center; }
+    .tab { padding: 12px 14px; font-size: 11px; }
+    .stat-value { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚗️</div>
+    <div>
+      <h1>QuimicaControl</h1>
+      <p>Sistema de Medição de Produtos Químicos</p>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="dot"></div>
+    <span>SISTEMA ONLINE</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('dashboard',this)">📊 Dashboard</div>
+  <div class="tab" onclick="showTab('graficos',this)">📈 Gráficos</div>
+  <div class="tab" onclick="showTab('medicao',this)">📏 Nova Medição</div>
+  <div class="tab" onclick="showTab('historico',this)">📋 Histórico</div>
+  <div class="tab" onclick="showTab('relatorio',this)">📄 Relatório PDF</div>
+  <div class="tab" onclick="showTab('produtos',this)">🧪 Produtos</div>
+</div>
+
+<div class="container">
+
+  <!-- DASHBOARD -->
+  <div class="section active" id="tab-dashboard">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value" id="stat-produtos">-</div><div class="stat-label">Produtos Cadastrados</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-medicoes">-</div><div class="stat-label">Medições Hoje</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-total-kg">-</div><div class="stat-label">Total em Estoque (KG)</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-consumo">-</div><div class="stat-label">Consumo Hoje (KG)</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Estoque Atual por Produto</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Produto</th><th>Densidade</th><th>Última Medição</th><th>Altura (cm)</th><th>Estoque Atual (KG)</th><th>Variação</th></tr></thead>
+          <tbody id="tbody-dashboard"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRÁFICOS -->
+  <div class="section" id="tab-graficos">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="card-title">📦 Estoque Atual por Produto</div>
+        <canvas id="grafico-estoque"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="card-title">📉 Consumo Últimos 7 Dias</div>
+        <div class="chart-filter">
+          <div class="form-group" style="flex:1">
+            <label>Filtrar Produto</label>
+            <select id="grafico-produto-sel" onchange="renderGraficoConsumo()">
+              <option value="">Todos os produtos</option>
+            </select>
+          </div>
+        </div>
+        <canvas id="grafico-consumo"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">📈 Histórico de Estoque por Produto</div>
+      <div class="chart-filter">
+        <div class="form-group" style="flex:1">
+          <label>Produto</label>
+          <select id="grafico-hist-sel" onchange="renderGraficoHistorico()">
+            <option value="">Selecione um produto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Período</label>
+          <select id="grafico-hist-dias" onchange="renderGraficoHistorico()">
+            <option value="7">7 dias</option>
+            <option value="15">15 dias</option>
+            <option value="30" selected>30 dias</option>
+            <option value="90">90 dias</option>
+          </select>
+        </div>
+      </div>
+      <canvas id="grafico-historico" style="max-height:300px"></canvas>
+    </div>
+  </div>
+
+  <!-- NOVA MEDIÇÃO -->
+  <div class="section" id="tab-medicao">
+    <div class="card">
+      <div class="card-title">📏 Registrar Nova Medição</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Produto *</label>
+          <select id="med-produto" onchange="calcularPreview()"><option value="">Selecione...</option></select>
+        </div>
+        <div class="form-group">
+          <label>Data *</label>
+          <input type="date" id="med-data">
+        </div>
+        <div class="form-group">
+          <label>Altura na Trena (cm) *</label>
+          <input type="number" id="med-altura" placeholder="Ex: 85.5" step="0.1" min="0" oninput="calcularPreview()">
+        </div>
+        <div class="form-group">
+          <label>Observação</label>
+          <input type="text" id="med-obs" placeholder="Opcional...">
+        </div>
+      </div>
+      <div class="preview-box" id="med-preview">
+        <div class="card-title">⚡ Pré-visualização</div>
+        <div class="stats-grid" style="margin-bottom:0">
+          <div class="stat-card"><div class="stat-value" id="prev-estoque" style="color:var(--success)">-</div><div class="stat-label">Estoque Estimado (KG)</div></div>
+          <div class="stat-card"><div class="stat-value" id="prev-diferenca">-</div><div class="stat-label">Diferença do Anterior (KG)</div></div>
+        </div>
+      </div>
+      <div class="btn-actions">
+        <button class="btn btn-primary" onclick="salvarMedicao()">💾 Salvar Medição</button>
+        <button class="btn btn-warning" onclick="limparMedicao()">🔄 Limpar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div class="section" id="tab-historico">
+    <div class="card">
+      <div class="card-title">📋 Histórico de Medições</div>
+      <div class="form-grid" style="margin-bottom:20px">
+        <div class="form-group">
+          <label>Filtrar por Produto</label>
+          <select id="filtro-produto" onchange="renderHistorico()"><option value="">Todos</option></select>
+        </div>
+        <div class="form-group">
+          <label>Filtrar por Data</label>
+          <input type="date" id="filtro-data" onchange="renderHistorico()">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Produto</th><th>Altura (cm)</th><th>Estoque (KG)</th><th>Diferença (KG)</th><th>Observação</th><th>Ações</th></tr></thead>
+          <tbody id="tbody-historico"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RELATÓRIO PDF -->
+  <div class="section" id="tab-relatorio">
+    <div class="card">
+      <div class="card-title">📄 Gerar Relatório PDF</div>
+      <div class="rel-filtros">
+        <div class="form-group">
+          <label>Produto</label>
+          <select id="rel-produto"><option value="">Todos os produtos</option></select>
+        </div>
+        <div class="form-group">
+          <label>Data Início</label>
+          <input type="date" id="rel-inicio">
+        </div>
+        <div class="form-group">
+          <label>Data Fim</label>
+          <input type="date" id="rel-fim">
+        </div>
+        <div class="form-group">
+          <label>Tipo de Relatório</label>
+          <select id="rel-tipo">
+            <option value="completo">Relatório Completo</option>
+            <option value="resumo">Resumo por Produto</option>
+            <option value="consumo">Consumo Diário</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-actions">
+        <button class="btn btn-pdf" onclick="gerarPDF()">📄 Gerar PDF</button>
+        <button class="btn btn-primary" onclick="previewRelatorio()">👁️ Pré-visualizar</button>
+      </div>
+    </div>
+    <div class="card" id="preview-rel" style="display:none">
+      <div class="card-title">👁️ Pré-visualização</div>
+      <div id="preview-rel-content"></div>
+    </div>
+  </div>
+
+  <!-- PRODUTOS -->
+  <div class="section" id="tab-produtos">
+    <div class="card">
+      <div class="card-title">🧪 Cadastrar Novo Produto</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Nome do Produto *</label><input type="text" id="prod-nome" placeholder="Ex: Ácido Sulfúrico"></div>
+        <div class="form-group"><label>Densidade (g/cm³) *</label><input type="number" id="prod-densidade" placeholder="Ex: 1.84" step="0.001" min="0"></div>
+        <div class="form-group"><label>Capacidade Máxima (KG) *</label><input type="number" id="prod-capacidade" placeholder="Ex: 1000" min="0"></div>
+        <div class="form-group"><label>Altura Total do Container (cm) *</label><input type="number" id="prod-altura" placeholder="Ex: 120" step="0.1" min="0"></div>
+      </div>
+      <div class="btn-actions">
+        <button class="btn btn-primary" onclick="salvarProduto()">💾 Cadastrar Produto</button>
+        <button class="btn btn-warning" onclick="limparProduto()">🔄 Limpar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📦 Produtos Cadastrados</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Densidade</th><th>Capacidade (KG)</th><th>Altura Container (cm)</th><th>Cadastrado em</th><th>Ações</th></tr></thead>
+          <tbody id="tbody-produtos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL PRODUTO -->
+<div class="modal-overlay" id="modal-produto">
+  <div class="modal">
+    <h3>✏️ Editar Produto</h3>
+    <input type="hidden" id="edit-prod-id">
+    <div class="form-group" style="margin-bottom:15px"><label>Nome</label><input type="text" id="edit-prod-nome"></div>
+    <div class="form-group" style="margin-bottom:15px"><label>Densidade (g/cm³)</label><input type="number" id="edit-prod-densidade" step="0.001"></div>
+    <div class="form-group" style="margin-bottom:15px"><label>Capacidade (KG)</label><input type="number" id="edit-prod-capacidade"></div>
+    <div class="form-group"><label>Altura Container (cm)</label><input type="number" id="edit-prod-altura" step="0.1"></div>
+    <div class="modal-actions">
+      <button class="btn btn-warning" onclick="fecharModal('modal-produto')">Cancelar</button>
+      <button class="btn btn-success" onclick="atualizarProduto()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MEDIÇÃO -->
+<div class="modal-overlay" id="modal-medicao">
+  <div class="modal">
+    <h3>✏️ Editar Medição</h3>
+    <input type="hidden" id="edit-med-id">
+    <div class="form-group" style="margin-bottom:15px"><label>Data</label><input type="date" id="edit-med-data"></div>
+    <div class="form-group" style="margin-bottom:15px"><label>Altura (cm)</label><input type="number" id="edit-med-altura" step="0.1"></div>
+    <div class="form-group"><label>Observação</label><input type="text" id="edit-med-obs"></div>
+    <div class="modal-actions">
+      <button class="btn btn-warning" onclick="fecharModal('modal-medicao')">Cancelar</button>
+      <button class="btn btn-success" onclick="atualizarMedicao()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let produtos = [];
+  let medicoes = [];
+  let chartEstoque = null;
+  let chartConsumo = null;
+  let chartHistorico = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('med-data').value = hoje();
+    const agora = new Date();
+    const primeiroDia = new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString().split('T')[0];
+    document.getElementById('rel-inicio').value = primeiroDia;
+    document.getElementById('rel-fim').value = hoje();
+    init();
+  });
+
+  function hoje() { return new Date().toISOString().split('T')[0]; }
+
+  async function init() {
+    await carregarProdutos();
+    await carregarMedicoes();
+    atualizarDashboard();
+  }
+
+  function showTab(tab, el) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    el.classList.add('active');
+    if (tab === 'historico') renderHistorico();
+    if (tab === 'dashboard') atualizarDashboard();
+    if (tab === 'graficos') {
+      setTimeout(() => {
+        renderGraficoEstoque();
+        renderGraficoConsumo();
+      }, 100);
+    }
+  }
+
+  function toast(msg, tipo = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + tipo;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+  function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+  window.addEventListener('click', e => {
+    if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+  });
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/"/g,'&quot;');
+  }
+
+  // ===== PRODUTOS =====
+  async function carregarProdutos() {
+    const res = await fetch('/api/produtos');
+    produtos = await res.json();
+    renderProdutos();
+    popularSelects();
+  }
+
+  function renderProdutos() {
+    const tbody = document.getElementById('tbody-produtos');
+    if (!produtos.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon">🧪</div><p>Nenhum produto cadastrado ainda.</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = produtos.map(p => `
+      <tr>
+        <td><strong>${esc(p.nome)}</strong></td>
+        <td>${p.densidade} g/cm³</td>
+        <td>${p.capacidade_kg} KG</td>
+        <td>${p.altura_container} cm</td>
+        <td>${p.criado_em || '-'}</td>
+        <td>
+          <button class="btn btn-warning btn-sm" onclick="editarProduto(${p.id})">✏️ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="excluirProduto(${p.id},'${esc(p.nome)}')">🗑️ Excluir</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function popularSelects() {
+    ['med-produto','filtro-produto','rel-produto','grafico-produto-sel','grafico-hist-sel'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      const val = sel.value;
+      const def = id === 'med-produto' ? '<option value="">Selecione...</option>'
+        : id === 'grafico-hist-sel' ? '<option value="">Selecione um produto</option>'
+        : '<option value="">Todos os produtos</option>';
+      sel.innerHTML = def + produtos.map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('');
+      sel.value = val;
+    });
+  }
+
+  async function salvarProduto() {
+    const nome = document.getElementById('prod-nome').value.trim();
+    const densidade = parseFloat(document.getElementById('prod-densidade').value);
+    const capacidade_kg = parseFloat(document.getElementById('prod-capacidade').value);
+    const altura_container = parseFloat(document.getElementById('prod-altura').value);
+    if (!nome || !densidade || !capacidade_kg || !altura_container)
+      return toast('Preencha todos os campos!', 'error');
+    const res = await fetch('/api/produtos', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({nome, densidade, capacidade_kg, altura_container})
+    });
+    const data = await res.json();
+    if (data.erro) return toast(data.erro, 'error');
+    toast('✅ ' + data.mensagem);
+    limparProduto();
+    await carregarProdutos();
+  }
+
+  function limparProduto() {
+    ['prod-nome','prod-densidade','prod-capacidade','prod-altura'].forEach(id => document.getElementById(id).value = '');
+  }
+
+  function editarProduto(id) {
+    const p = produtos.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('edit-prod-id').value = p.id;
+    document.getElementById('edit-prod-nome').value = p.nome;
+    document.getElementById('edit-prod-densidade').value = p.densidade;
+    document.getElementById('edit-prod-capacidade').value = p.capacidade_kg;
+    document.getElementById('edit-prod-altura').value = p.altura_container;
+    abrirModal('modal-produto');
+  }
+
+  async function atualizarProduto() {
+    const id = document.getElementById('edit-prod-id').value;
+    const nome = document.getElementById('edit-prod-nome').value.trim();
+    const densidade = parseFloat(document.getElementById('edit-prod-densidade').value);
+    const capacidade_kg = parseFloat(document.getElementById('edit-prod-capacidade').value);
+    const altura_container = parseFloat(document.getElementById('edit-prod-altura').value);
+    const res = await fetch('/api/produtos/' + id, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({nome, densidade, capacidade_kg, altura_container})
+    });
+    const data = await res.json();
+    if (data.erro) return toast(data.erro, 'error');
+    toast('✅ ' + data.mensagem);
+    fecharModal('modal-produto');
+    await carregarProdutos();
+  }
+
+  async function excluirProduto(id, nome) {
+    if (!confirm(`Excluir o produto "${nome}"?`)) return;
+    const res = await fetch('/api/produtos/' + id, {method: 'DELETE'});
+    const data = await res.json();
+    if (data.erro) return toast(data.erro, 'error');
+    toast('🗑️ ' + data.mensagem);
+    await carregarProdutos();
+  }
+
+  // ===== MEDIÇÕES =====
+  async function carregarMedicoes() {
+    const res = await fetch('/api/medicoes');
+    medicoes = await res.json();
+  }
+
+  function calcularPreview() {
+    const prodId = parseInt(document.getElementById('med-produto').value);
+    const altura = parseFloat(document.getElementById('med-altura').value);
+    const prev = document.getElementById('med-preview');
+    if (!prodId || isNaN(altura)) { prev.style.display = 'none'; return; }
+    const prod = produtos.find(p => p.id === prodId);
+    if (!prod) return;
+    const estoque = Math.max(0, (altura / prod.altura_container) * prod.capacidade_kg);
+    const ultima = medicoes.filter(m => m.produto_id === prodId).sort((a,b) => new Date(b.data) - new Date(a.data))[0];
+    const diferenca = ultima ? estoque - parseFloat(ultima.estoque_kg) : 0;
+    document.getElementById('prev-estoque').textContent = estoque.toFixed(1) + ' KG';
+    const divDif = document.getElementById('prev-diferenca');
+    divDif.textContent = (diferenca >= 0 ? '+' : '') + diferenca.toFixed(1) + ' KG';
+    divDif.style.color = diferenca >= 0 ? 'var(--success)' : 'var(--danger)';
+    prev.style.display = 'block';
+  }
+
+  async function salvarMedicao() {
+    const produto_id = document.getElementById('med-produto').value;
+    const data = document.getElementById('med-data').value;
+    const altura_medida = parseFloat(document.getElementById('med-altura').value);
+    const observacao = document.getElementById('med-obs').value;
+    if (!produto_id || !data || isNaN(altura_medida))
+      return toast('Preencha todos os campos obrigatórios!', 'error');
+    const res = await fetch('/api/medicoes', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({produto_id, data, altura_medida, observacao})
+    });
+    const result = await res.json();
+    if (result.erro) return toast(result.erro, 'error');
+    toast('✅ Medição salva! Estoque: ' + result.estoque_kg + ' KG');
+    limparMedicao();
+    await carregarMedicoes();
+    atualizarDashboard();
+  }
+
+  function limparMedicao() {
+    document.getElementById('med-produto').value = '';
+    document.getElementById('med-data').value = hoje();
+    document.getElementById('med-altura').value = '';
+    document.getElementById('med-obs').value = '';
+    document.getElementById('med-preview').style.display = 'none';
+  }
+
+  function renderHistorico() {
+    const filtroProd = document.getElementById('filtro-produto').value;
+    const filtroData = document.getElementById('filtro-data').value;
+    let lista = [...medicoes];
+    if (filtroProd) lista = lista.filter(m => m.produto_id == filtroProd);
+    if (filtroData) lista = lista.filter(m => m.data === filtroData);
+    const tbody = document.getElementById('tbody-historico');
+    if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon">📋</div><p>Nenhuma medição encontrada.</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = lista.map(m => {
+      const dif = parseFloat(m.diferenca_kg);
+      const badge = dif > 0 ? 'badge-up' : dif < 0 ? 'badge-down' : 'badge-neutral';
+      const sinal = dif > 0 ? '+' : '';
+      return `<tr>
+        <td>${m.data}</td>
+        <td><strong>${esc(m.produto_nome)}</strong></td>
+        <td>${m.altura_medida} cm</td>
+        <td>${parseFloat(m.estoque_kg).toFixed(1)} KG</td>
+        <td><span class="badge ${badge}">${sinal}${dif.toFixed(1)} KG</span></td>
+        <td>${esc(m.observacao || '-')}</td>
+        <td>
+          <button class="btn btn-warning btn-sm" onclick="editarMedicao(${m.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="excluirMedicao(${m.id})">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function editarMedicao(id) {
+    const m = medicoes.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('edit-med-id').value = m.id;
+    document.getElementById('edit-med-data').value = m.data;
+    document.getElementById('edit-med-altura').value = m.altura_medida;
+    document.getElementById('edit-med-obs').value = m.observacao || '';
+    abrirModal('modal-medicao');
+  }
+
+  async function atualizarMedicao() {
+    const id = document.getElementById('edit-med-id').value;
+    const data = document.getElementById('edit-med-data').value;
+    const altura_medida = parseFloat(document.getElementById('edit-med-altura').value);
+    const observacao = document.getElementById('edit-med-obs').value;
+    const res = await fetch('/api/medicoes/' + id, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({data, altura_medida, observacao})
+    });
+    const result = await res.json();
+    if (result.erro) return toast(result.erro, 'error');
+    toast('✅ Medição atualizada!');
+    fecharModal('modal-medicao');
+    await carregarMedicoes();
+    renderHistorico();
+    atualizarDashboard();
+  }
+
+  async function excluirMedicao(id) {
+    if (!confirm('Excluir esta medição?')) return;
+    const res = await fetch('/api/medicoes/' + id, {method: 'DELETE'});
+    const data = await res.json();
+    if (data.erro) return toast(data.erro, 'error');
+    toast('🗑️ Medição excluída!');
+    await carregarMedicoes();
+    renderHistorico();
+    atualizarDashboard();
+  }
+
+  // ===== DASHBOARD =====
+  function atualizarDashboard() {
+    const dataHoje = hoje();
+    const medicoesHoje = medicoes.filter(m => m.data === dataHoje);
+    document.getElementById('stat-produtos').textContent = produtos.length;
+    document.getElementById('stat-medicoes').textContent = medicoesHoje.length;
+    let totalKg = 0, consumoHoje = 0;
+    const tbody = document.getElementById('tbody-dashboard');
+    if (!produtos.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon">📊</div><p>Cadastre produtos para ver o dashboard.</p></div></td></tr>`;
+      document.getElementById('stat-total-kg').textContent = '0';
+      document.getElementById('stat-consumo').textContent = '0';
+      return;
+    }
+    tbody.innerHTML = produtos.map(p => {
+      const medProd = medicoes.filter(m => m.produto_id === p.id)
+        .sort((a,b) => new Date(b.data) - new Date(a.data));
+      const ultima = medProd[0];
+      const dif = ultima ? parseFloat(ultima.diferenca_kg) : 0;
+      if (ultima) totalKg += parseFloat(ultima.estoque_kg);
+      if (ultima && ultima.data === dataHoje) consumoHoje += Math.abs(Math.min(0, dif));
+      const badge = dif > 0 ? 'badge-up' : dif < 0 ? 'badge-down' : 'badge-neutral';
+      const sinal = dif > 0 ? '+' : '';
+      return `<tr>
+        <td><strong>${esc(p.nome)}</strong></td>
+        <td>${p.densidade} g/cm³</td>
+        <td>${ultima ? ultima.data : '<em style="color:var(--text2)">Sem medições</em>'}</td>
+        <td>${ultima ? ultima.altura_medida + ' cm' : '-'}</td>
+        <td>${ultima ? parseFloat(ultima.estoque_kg).toFixed(1) + ' KG' : '-'}</td>
+        <td>${ultima ? `<span class="badge ${badge}">${sinal}${dif.toFixed(1)} KG</span>` : '-'}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('stat-total-kg').textContent = totalKg.toFixed(0);
+    document.getElementById('stat-consumo').textContent = consumoHoje.toFixed(0);
+  }
+
+  // ===== GRÁFICOS =====
+  const coresGrafico = ['#00d4ff','#7b2ff7','#00ff88','#ff3366','#ffaa00','#ff6b6b','#4ecdc4','#45b7d1'];
+
+  function renderGraficoEstoque() {
+    const labels = [], data = [], cores = [];
+    produtos.forEach((p, i) => {
+      const ultima = medicoes.filter(m => m.produto_id === p.id)
+        .sort((a,b) => new Date(b.data) - new Date(a.data))[0];
+      if (ultima) {
+        labels.push(p.nome);
+        data.push(parseFloat(ultima.estoque_kg).toFixed(1));
+        cores.push(coresGrafico[i % coresGrafico.length]);
+      }
+    });
+    if (chartEstoque) chartEstoque.destroy();
+    chartEstoque = new Chart(document.getElementById('grafico-estoque'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Estoque (KG)', data,
+          backgroundColor: cores.map(c => c + '88'),
+          borderColor: cores, borderWidth: 2, borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#e0f0ff' } } },
+        scales: {
+          x: { ticks: { color: '#7a9ab5' }, grid: { color: '#00d4ff11' } },
+          y: { ticks: { color: '#7a9ab5' }, grid: { color: '#00d4ff11' } }
+        }
+      }
+    });
+  }
+
+  function renderGraficoConsumo() {
+    const prodId = document.getElementById('grafico-produto-sel').value;
+    const labels = [], dataConsumo = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dataStr = d.toISOString().split('T')[0];
+      labels.push(dataStr);
+      let consumo = 0;
+      let lista = medicoes.filter(m => m.data === dataStr);
+      if (prodId) lista = lista.filter(m => m.produto_id == prodId);
+      lista.forEach(m => { const dif = parseFloat(m.diferenca_kg); if (dif < 0) consumo += Math.abs(dif); });
+      dataConsumo.push(consumo.toFixed(1));
+    }
+    if (chartConsumo) chartConsumo.destroy();
+    chartConsumo = new Chart(document.getElementById('grafico-consumo'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Consumo (KG)', data: dataConsumo,
+          borderColor: '#ff3366', backgroundColor: '#ff336622',
+          fill: true, tension: 0.4, pointBackgroundColor: '#ff3366', pointRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#e0f0ff' } } },
+        scales: {
+          x: { ticks: { color: '#7a9ab5', maxRotation: 45 }, grid: { color: '#00d4ff11' } },
+          y: { ticks: { color: '#7a9ab5' }, grid: { color: '#00d4ff11' } }
+        }
+      }
+    });
+  }
+
+  function renderGraficoHistorico() {
+    const prodId = parseInt(document.getElementById('grafico-hist-sel').value);
+    const dias = parseInt(document.getElementById('grafico-hist-dias').value);
+    if (!prodId) { if (chartHistorico) { chartHistorico.destroy(); chartHistorico = null; } return; }
+    const dataLimite = new Date();
+    dataLimite.setDate(dataLimite.getDate() - dias);
+    const medProd = medicoes
+      .filter(m => m.produto_id === prodId && new Date(m.data) >= dataLimite)
+      .sort((a,b) => new Date(a.data) - new Date(b.data));
+    if (chartHistorico) chartHistorico.destroy();
+    chartHistorico = new Chart(document.getElementById('grafico-historico'), {
+      type: 'line',
+      data: {
+        labels: medProd.map(m => m.data),
+        datasets: [{
+          label: 'Estoque (KG)', data: medProd.map(m => parseFloat(m.estoque_kg).toFixed(1)),
+          borderColor: '#00d4ff', backgroundColor: '#00d4ff22',
+          fill: true, tension: 0.4, pointBackgroundColor: '#00d4ff', pointRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#e0f0ff' } } },
+        scales: {
+          x: { ticks: { color: '#7a9ab5', maxRotation: 45 }, grid: { color: '#00d4ff11' } },
+          y: { ticks: { color: '#7a9ab5' }, grid: { color: '#00d4ff11' } }
+        }
+      }
+    });
+  }
+
+  // ===== PDF =====
+  function filtrarMedicoesPDF() {
+    const prodId = document.getElementById('rel-produto').value;
+    const inicio = document.getElementById('rel-inicio').value;
+    const fim = document.getElementById('rel-fim').value;
+    let lista = [...medicoes];
+    if (prodId) lista = lista.filter(m => m.produto_id == prodId);
+    if (inicio) lista = lista.filter(m => m.data >= inicio);
+    if (fim) lista = lista.filter(m => m.data <= fim);
+    return lista.sort((a,b) => new Date(a.data) - new Date(b.data));
+  }
+
+  function previewRelatorio() {
+    const lista = filtrarMedicoesPDF();
+    const div = document.getElementById('preview-rel-content');
+    const card = document.getElementById('preview-rel');
+    if (!lista.length) {
+      div.innerHTML = '<div class="empty"><div class="empty-icon">📄</div><p>Nenhum dado encontrado.</p></div>';
+      card.style.display = 'block';
+      return;
+    }
+    div.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Produto</th><th>Altura (cm)</th><th>Estoque (KG)</th><th>Diferença (KG)</th><th>Observação</th></tr></thead>
+          <tbody>${lista.map(m => {
+            const dif = parseFloat(m.diferenca_kg);
+            return `<tr>
+              <td>${m.data}</td><td>${esc(m.produto_nome)}</td><td>${m.altura_medida} cm</td>
+              <td>${parseFloat(m.estoque_kg).toFixed(1)} KG</td>
+              <td style="color:${dif<0?'var(--danger)':'var(--success)'}">${dif>=0?'+':''}${dif.toFixed(1)} KG</td>
+              <td>${esc(m.observacao||'-')}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+      <p style="margin-top:15px;color:var(--text2);font-size:12px">Total: <strong style="color:var(--primary)">${lista.length} registros</strong></p>`;
+    card.style.display = 'block';
+  }
+
+  async function gerarPDF() {
+    const lista = filtrarMedicoesPDF();
+    if (!lista.length) return toast('Nenhum dado para gerar PDF!', 'error');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const tipo = document.getElementById('rel-tipo').value;
+    const inicio = document.getElementById('rel-inicio').value;
+    const fim = document.getElementById('rel-fim').value;
+    doc.setFillColor(5, 13, 26);
+    doc.rect(0, 0, 300, 30, 'F');
+    doc.setTextColor(0, 212, 255);
+    doc.setFontSize(16);
+    doc.text('QuimicaControl - Relatorio de Medicoes', 14, 14);
+    doc.setFontSize(9);
+    doc.setTextColor(122, 154, 181);
+    doc.text(`Periodo: ${inicio} a ${fim}  |  Gerado: ${new Date().toLocaleString('pt-BR')}`, 14, 23);
+    if (tipo === 'completo') {
+      doc.autoTable({
+        startY: 35,
+        head: [['Data','Produto','Densidade','Altura (cm)','Estoque (KG)','Diferenca (KG)','Observacao']],
+        body: lista.map(m => [m.data, m.produto_nome, m.densidade+' g/cm³', m.altura_medida+' cm',
+          parseFloat(m.estoque_kg).toFixed(1)+' KG',
+          (parseFloat(m.diferenca_kg)>=0?'+':'')+parseFloat(m.diferenca_kg).toFixed(1)+' KG',
+          m.observacao||'-']),
+        styles:{fontSize:8,cellPadding:3},
+        headStyles:{fillColor:[10,22,40],textColor:[0,212,255]},
+        alternateRowStyles:{fillColor:[13,31,53]},
+        bodyStyles:{textColor:[224,240,255]}
+      });
+    } else if (tipo === 'resumo') {
+      const resumo = {};
+      lista.forEach(m => {
+        if (!resumo[m.produto_nome]) resumo[m.produto_nome] = {medicoes:0,ultimoEstoque:0,totalConsumo:0};
+        resumo[m.produto_nome].medicoes++;
+        resumo[m.produto_nome].ultimoEstoque = parseFloat(m.estoque_kg);
+        const dif = parseFloat(m.diferenca_kg);
+        if (dif < 0) resumo[m.produto_nome].totalConsumo += Math.abs(dif);
+      });
+      doc.autoTable({
+        startY: 35,
+        head: [['Produto','Total Medicoes','Ultimo Estoque (KG)','Consumo Total (KG)']],
+        body: Object.entries(resumo).map(([n,d]) => [n, d.medicoes, d.ultimoEstoque.toFixed(1)+' KG', d.totalConsumo.toFixed(1)+' KG']),
+        styles:{fontSize:10,cellPadding:4},
+        headStyles:{fillColor:[10,22,40],textColor:[0,212,255]},
+        alternateRowStyles:{fillColor:[13,31,53]},
+        bodyStyles:{textColor:[224,240,255]}
+      });
+    } else {
+      const porDia = {};
+      lista.forEach(m => {
+        if (!porDia[m.data]) porDia[m.data] = {};
+        if (!porDia[m.data][m.produto_nome]) porDia[m.data][m.produto_nome] = 0;
+        const dif = parseFloat(m.diferenca_kg);
+        if (dif < 0) porDia[m.data][m.produto_nome] += Math.abs(dif);
+      });
+      const rows = [];
+      Object.entries(porDia).sort().forEach(([data, prods]) => {
+        Object.entries(prods).forEach(([prod, consumo]) => rows.push([data, prod, consumo.toFixed(1)+' KG']));
+      });
+      doc.autoTable({
+        startY: 35,
+        head: [['Data','Produto','Consumo (KG)']],
+        body: rows,
+        styles:{fontSize:10,cellPadding:4},
+        headStyles:{fillColor:[10,22,40],textColor:[0,212,255]},
+        alternateRowStyles:{fillColor:[13,31,53]},
+        bodyStyles:{textColor:[224,240,255]}
+      });
+    }
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(122,154,181);
+      doc.text(`Pagina ${i} de ${pageCount} - QuimicaControl`, 14, doc.internal.pageSize.height - 8);
+    }
+    doc.save(`relatorio-quimica-${hoje()}.pdf`);
+    toast('✅ PDF gerado com sucesso!');
+  }
+</script>
+</body>
+</html>
